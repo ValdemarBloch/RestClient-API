@@ -7,16 +7,29 @@ import org.example.restcilentdemo.dto.PersonDataResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.HashMap;
+import java.util.Map;
+
+
 @Service
 public class PersonDataService {
 
     private final RestClient restClient;
+
+    private final Map<String,PersonDataResponse> cache = new HashMap<>();
 
     public PersonDataService(RestClient restClient){
         this.restClient = restClient;
     }
 
     public PersonDataResponse getPersonData(String firstName, String middleName,String lastName ){
+
+        String cacheKey = firstName +" " + middleName +" "+ lastName;
+
+        if(cache.containsKey(cacheKey)){
+            return cache.get(cacheKey);
+        }
+        System.out.println("Kalder eksterne API'er for: " + cacheKey);
 
         AgifyResponse agify = restClient.get()
                 .uri("https://api.agify.io?name={name}", firstName)
@@ -47,7 +60,7 @@ public class PersonDataService {
             countryProbability = top.probability();
 
         }
-        return new PersonDataResponse(
+        PersonDataResponse response = new PersonDataResponse(
                 name,
                 firstName,
                 middleName,
@@ -55,10 +68,15 @@ public class PersonDataService {
                 genderize != null ? genderize.gender() : null,
                 genderize != null ? genderize.probability() : null,
                 agify != null ? agify.age() : null,
-                null,  // agify giver ingen ageProbability
+                null,
                 country,
                 countryProbability
         );
 
-    }
+        cache.put(cacheKey, response);
+        return response;
+}
+
+
+
 }
